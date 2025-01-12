@@ -6,7 +6,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 
 public class DatabaseHelper extends SQLiteOpenHelper {
     private static final String DATABASE_NAME = "pokecoin.db";
-    private static final int DATABASE_VERSION = 1;
+    private static final int DATABASE_VERSION = 2;
 
     public DatabaseHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
@@ -32,6 +32,12 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             "amount REAL NOT NULL," +
             "date INTEGER NOT NULL," +
             "FOREIGN KEY(user_id) REFERENCES users(id))"
+        );
+
+        // 插入测试用户
+        db.execSQL(
+                "INSERT INTO users (username, password, email) " +
+                        "VALUES ('testuser', 'password123', 'testuser@example.com')"
         );
     }
 

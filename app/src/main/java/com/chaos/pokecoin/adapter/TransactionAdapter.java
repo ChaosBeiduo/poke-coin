@@ -59,6 +59,16 @@ public class TransactionAdapter extends RecyclerView.Adapter<TransactionAdapter.
         notifyItemInserted(0);
     }
 
+    public void clearTransactions() {
+        transactions.clear();
+        notifyDataSetChanged();
+    }
+
+    public void addTransactions(List<Transaction> newTransactions) {
+        transactions.addAll(newTransactions);
+        notifyDataSetChanged();
+    }
+
     static class ViewHolder extends RecyclerView.ViewHolder {
         TextView textType;
         TextView textDate;

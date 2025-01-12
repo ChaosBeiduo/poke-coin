@@ -85,6 +85,7 @@ public class MainActivity extends AppCompatActivity {
         initViews();
         setupRecyclerView();
         setupClickListeners();
+        loadTransactions();
         updateTotalAmounts();
     }
 
@@ -123,8 +124,8 @@ public class MainActivity extends AppCompatActivity {
                 Intent intent = new Intent(MainActivity.this, LoginActivity.class);
                 loginLauncher.launch(intent);
             } else {
-                // TODO: 显示用户信息页面
-                Toast.makeText(this, "已登录", Toast.LENGTH_SHORT).show();
+                Intent intent = new Intent(MainActivity.this, UserProfileActivity.class);
+                loginLauncher.launch(intent);
             }
         });
     }
@@ -135,13 +136,37 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void updateUserUI() {
-        // TODO: 更新用户界面显示
+        UserManager userManager = UserManager.getInstance(this);
+        // 同步未登录时的交易记录
+        userManager.syncGuestTransactions();
+        
+        // 清空当前数据
+        totalIncome = 0;
+        totalExpense = 0;
+        
+        // 加载用户相关的交易记录
+        loadTransactions();
     }
 
     private void loadTransactions() {
         List<Transaction> transactions = transactionManager.getTransactions(
             UserManager.getInstance(this).getCurrentUserId()
         );
-        // TODO: 更新 adapter 和总额
+        
+        // 清空现有数据
+        transactionAdapter.clearTransactions();
+        
+        // 添加所有交易记录并计算总额
+        for (Transaction transaction : transactions) {
+            transactionAdapter.addTransaction(transaction);
+            if (transaction.getType().equals("收入")) {
+                totalIncome += transaction.getAmount();
+            } else {
+                totalExpense += transaction.getAmount();
+            }
+        }
+        
+        // 更新总额显示
+        updateTotalAmounts();
     }
 }
