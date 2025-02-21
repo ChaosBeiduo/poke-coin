@@ -37,7 +37,7 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Hi, 欢迎来到PokeCoin!"
+        android:text="Hi, 欢迎来到PokeMall!"
         android:textSize="24dp"
         android:textStyle="bold" />
 

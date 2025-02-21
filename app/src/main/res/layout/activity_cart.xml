@@ -32,17 +32,28 @@
             android:layout_centerInParent="true"/>
     </RelativeLayout>
 
-    <!-- 商品列表 -->
+    <!--  Content  -->
     <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/productRecyclerView"
+        android:id="@+id/cartRecyclerView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_below="@id/topBar"
         android:layout_above="@id/menuBar"
-        android:padding="8dp"
-        android:clipToPadding="false"/>
+        android:padding="16dp" />
 
-    <!-- 底部导航栏 -->
+    <!-- 在 RecyclerView 和底部导航栏之间添加 -->
+    <TextView
+        android:id="@+id/total_price"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_above="@id/menuBar"
+        android:padding="16dp"
+        android:background="@android:color/white"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:gravity="end"/>
+
+    <!--  Footer  -->
     <LinearLayout
         android:id="@+id/menuBar"
         android:layout_width="match_parent"
@@ -53,7 +64,7 @@
         android:orientation="horizontal"
         android:weightSum="3">
 
-        <!-- 首页按钮 -->
+        <!-- Home 图标和文字 -->
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
@@ -79,16 +90,17 @@
                 android:textColor="#888888" />
         </LinearLayout>
 
-        <!-- 购物车按钮 -->
+        <!-- Add Transaction 图标 -->
+
         <ImageButton
             android:id="@+id/buttonCart"
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:layout_marginBottom="6dp"
             android:background="@android:color/transparent"
-            android:src="@drawable/cart" />
+            android:src="@drawable/cart_active" />
 
-        <!-- 用户按钮 -->
+        <!-- User 图标和文字 -->
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
@@ -113,6 +125,7 @@
                 android:textSize="12sp"
                 android:textColor="#888888" />
         </LinearLayout>
+
     </LinearLayout>
 
 </RelativeLayout>

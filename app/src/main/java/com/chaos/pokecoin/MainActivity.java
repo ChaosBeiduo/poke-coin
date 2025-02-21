@@ -1,6 +1,7 @@
 package com.chaos.pokecoin;
 
 import android.content.Intent;
+import android.database.Cursor;
 import android.os.Bundle;
 import android.widget.ImageButton;
 import android.widget.TextView;
@@ -10,73 +11,41 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
-import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.chaos.pokecoin.adapter.TransactionAdapter;
-import com.chaos.pokecoin.model.Transaction;
+import com.chaos.pokecoin.adapter.ProductAdapter;
+import com.chaos.pokecoin.model.Product;
 import com.chaos.pokecoin.data.UserManager;
-import com.chaos.pokecoin.data.TransactionManager;
+import com.chaos.pokecoin.data.CartManager;
+import com.chaos.pokecoin.data.ProductManager;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
-    private TextView textTotalIncome;
-    private TextView textTotalExpense;
-    private ImageButton buttonAddTransaction;
+    private ImageButton buttonCart;
     private ImageButton buttonHome;
     private ImageButton buttonUser;
-    private RecyclerView transactionRecyclerView;
-    private TransactionAdapter transactionAdapter;
-    private double totalIncome = 0;
-    private double totalExpense = 0;
-
-    private ActivityResultLauncher<Intent> addTransactionLauncher;
+    private RecyclerView productRecyclerView;
+    private ProductAdapter productAdapter;
     private ActivityResultLauncher<Intent> loginLauncher;
-
-    private TransactionManager transactionManager;
+    private CartManager cartManager;
+    private ProductManager productManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        transactionManager = TransactionManager.getInstance(this);
-
-        // 初始化 ActivityResultLauncher
-        addTransactionLauncher = registerForActivityResult(
-                new ActivityResultContracts.StartActivityForResult(),
-                result -> {
-                    if (result.getResultCode() == RESULT_OK && result.getData() != null) {
-                        Intent data = result.getData();
-                        String type = data.getStringExtra("type");
-                        double amount = data.getDoubleExtra("amount", 0);
-
-                        Transaction transaction = new Transaction(type, amount);
-                        // 保存到数据库
-                        Integer userId = UserManager.getInstance(this).getCurrentUserId();
-                        long id = transactionManager.addTransaction(transaction, userId);
-                        
-                        if (id != -1) {
-                            transactionAdapter.addTransaction(transaction);
-                            // 更新总额
-                            if (type.equals("收入")) {
-                                totalIncome += amount;
-                            } else {
-                                totalExpense += amount;
-                            }
-                            updateTotalAmounts();
-                        }
-                    }
-                }
-        );
+        cartManager = new CartManager(this);
+        productManager = new ProductManager(this);
 
         loginLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
                 result -> {
                     if (result.getResultCode() == RESULT_OK) {
-                        // 登录成功后的处理
                         updateUserUI();
                     }
                 }
@@ -85,14 +54,11 @@ public class MainActivity extends AppCompatActivity {
         initViews();
         setupRecyclerView();
         setupClickListeners();
-        loadTransactions();
-        updateTotalAmounts();
+        loadProducts();
     }
 
     private void initViews() {
-        textTotalIncome = findViewById(R.id.textTotalIncome);
-        textTotalExpense = findViewById(R.id.textTotalExpense);
-        buttonAddTransaction = findViewById(R.id.buttonAddTransaction);
+        buttonCart = findViewById(R.id.buttonCart);
         buttonHome = findViewById(R.id.buttonHome);
         buttonUser = findViewById(R.id.buttonUser);
 
@@ -103,16 +69,28 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setupRecyclerView() {
-        transactionRecyclerView = findViewById(R.id.transactionRecyclerView);
-        transactionRecyclerView.setLayoutManager(new LinearLayoutManager(this));
-        transactionAdapter = new TransactionAdapter();
-        transactionRecyclerView.setAdapter(transactionAdapter);
+        productRecyclerView = findViewById(R.id.productRecyclerView);
+        productRecyclerView.setLayoutManager(new GridLayoutManager(this, 2));
+        
+        productAdapter = new ProductAdapter(this, new ArrayList<>(), new ProductAdapter.OnProductActionListener() {
+            @Override
+            public void onProductClick(Product product) {
+                showProductDetail(product);
+            }
+
+            @Override
+            public void onAddToCartClick(Product product) {
+                addToCart(product);
+            }
+        });
+        
+        productRecyclerView.setAdapter(productAdapter);
     }
 
     private void setupClickListeners() {
-        buttonAddTransaction.setOnClickListener(v -> {
-            Intent intent = new Intent(MainActivity.this, AddTransactionActivity.class);
-            addTransactionLauncher.launch(intent);
+        buttonCart.setOnClickListener(v -> {
+            Intent intent = new Intent(MainActivity.this, CartActivity.class);
+            startActivity(intent);
         });
 
         buttonHome.setOnClickListener(v -> {
@@ -125,48 +103,64 @@ public class MainActivity extends AppCompatActivity {
                 loginLauncher.launch(intent);
             } else {
                 Intent intent = new Intent(MainActivity.this, UserProfileActivity.class);
-                loginLauncher.launch(intent);
+                startActivity(intent);
             }
         });
     }
 
-    private void updateTotalAmounts() {
-        textTotalIncome.setText(String.format("总收入: ￥%.2f", totalIncome));
-        textTotalExpense.setText(String.format("总支出: ￥%.2f", totalExpense));
+    private void loadProducts() {
+        List<Product> products = new ArrayList<>();
+        Cursor cursor = productManager.getAllProducts();
+        
+        if (cursor != null && cursor.moveToFirst()) {
+            do {
+                int id = cursor.getInt(cursor.getColumnIndexOrThrow("id"));
+                String name = cursor.getString(cursor.getColumnIndexOrThrow("name"));
+                float price = cursor.getFloat(cursor.getColumnIndexOrThrow("price"));
+                String description = cursor.getString(cursor.getColumnIndexOrThrow("description"));
+                
+                Product product = new Product(id, name, price, description);
+                products.add(product);
+            } while (cursor.moveToNext());
+            
+            cursor.close();
+        }
+        
+        productAdapter.setProducts(products);
+    }
+
+    private void addToCart(Product product) {
+        UserManager userManager = UserManager.getInstance(this);
+        if (!userManager.isLoggedIn()) {
+            Toast.makeText(this, "请先登录", Toast.LENGTH_SHORT).show();
+            Intent intent = new Intent(MainActivity.this, LoginActivity.class);
+            loginLauncher.launch(intent);
+            return;
+        }
+
+        // 直接添加一个数量的商品到购物车
+        cartManager.addToCart(userManager.getCurrentUserId(), product.getId(), 1, (float)product.getPrice());
+        Toast.makeText(this, "已添加到购物车", Toast.LENGTH_SHORT).show();
+    }
+
+    private void showProductDetail(Product product) {
+//        Intent intent = new Intent(MainActivity.this, ProductDetailActivity.class);
+//        intent.putExtra("product_id", product.getId());
+//        startActivity(intent);
     }
 
     private void updateUserUI() {
-        UserManager userManager = UserManager.getInstance(this);
-        // 同步未登录时的交易记录
-        userManager.syncGuestTransactions();
-        
-        // 清空当前数据
-        totalIncome = 0;
-        totalExpense = 0;
-        
-        // 加载用户相关的交易记录
-        loadTransactions();
+        // 更新用户相关UI
     }
 
-    private void loadTransactions() {
-        List<Transaction> transactions = transactionManager.getTransactions(
-            UserManager.getInstance(this).getCurrentUserId()
-        );
-        
-        // 清空现有数据
-        transactionAdapter.clearTransactions();
-        
-        // 添加所有交易记录并计算总额
-        for (Transaction transaction : transactions) {
-            transactionAdapter.addTransaction(transaction);
-            if (transaction.getType().equals("收入")) {
-                totalIncome += transaction.getAmount();
-            } else {
-                totalExpense += transaction.getAmount();
-            }
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (cartManager != null) {
+            cartManager.close();
         }
-        
-        // 更新总额显示
-        updateTotalAmounts();
+        if (productManager != null) {
+            productManager.close();
+        }
     }
 }
